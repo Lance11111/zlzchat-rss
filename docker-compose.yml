@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  mysql8:
+    image: mysql:8.0
+    container_name: mysql8
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: gzhweb
+    volumes:
+      - "./mysql/data:/var/lib/mysql"
+      - "./mysql/conf.d:/etc/mysql/conf.d"
+    restart: unless-stopped
+    command: [
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_general_ci"
+    ]
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Asia/Shanghai
+    command: [
+      "--requirepass", "123456",
+      "--appendonly", "yes"
+    ]
+    restart: unless-stopped
+
+  zlzchat:
+    image: crpi-ah24egza1axyf372.cn-hangzhou.personal.cr.aliyuncs.com/docker-zlz/ck:1.0.1
+    container_name: zlzchat
+    ports:
+      - "10082:801"
+    environment:
+      TZ: Asia/Shanghai
+      PROFILES_ACTIVE: "pro"
+      MYSQL_URL: "jdbc:mysql://mysql8:3306/gzhweb?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8"
+      MYSQL_NAME: "root"
+      MYSQL_PWD: "123456"
+      SERVICE_PORT: "801"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "123456"
+      SERVER_URL: "http://localhost:10082"
+      API_SERVER: "http://103.40.14.228:18449"
+      PROFILE: "/www/wwwroot/zlzchat/uploadPath"
+    volumes:
+      - "./zlzchat:/www/wwwroot/zlzchat"
+    restart: always
+    depends_on:
+      - mysql8
+      - redis
+    command: >
+      sh -c "java
+      -Duser.timezone=GMT+08
+      -Xms1024m
+      -Xmx2048m
+      -Dlogging.config=/www/wwwroot/zlzchat/resources/logback.xml
+      -jar /www/wwwroot/zlzchat/website.jar"
